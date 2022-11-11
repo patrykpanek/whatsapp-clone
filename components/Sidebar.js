@@ -44,7 +44,7 @@ function Sidebar() {
   return (
     <Container>
       <Header>
-        <UserAvatar onClick={() => auth.signOut()} />
+        <UserAvatar src={user.photoURL} onClick={() => auth.signOut()} />
         <IconsContainer>
           <IconButton>
             <ChatIcon />
@@ -93,7 +93,20 @@ const SearchContainer = styled.div`
 
 const IconsContainer = styled.div``;
 
-const Container = styled.div``;
+const Container = styled.div`
+  flex: 0.45;
+  overflow-y: scroll;
+  max-width: 350px;
+  min-width: 300px;
+  height: 100vh;
+  border-right: 1px solid whitesmoke;
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+`;
 
 const Header = styled.div`
   display: flex;
