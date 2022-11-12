@@ -1,5 +1,4 @@
 import React from 'react';
-import { Circle } from 'better-react-spinkit';
 
 function Loading() {
   return (
@@ -10,7 +9,6 @@ function Loading() {
           height={200}
           alt="whatsapp"
         />
-        <Circle size={60} color="green" />
       </div>
     </center>
   );
