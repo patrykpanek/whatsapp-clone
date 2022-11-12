@@ -1,18 +1,28 @@
 import { useRouter } from 'next/router';
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import styled from 'styled-components';
 import { auth, db } from '../firebase';
 import Avatar from '@mui/material/Avatar';
-import { MoreVert, AttachFile } from '@mui/icons-material';
+import {
+  MoreVert,
+  AttachFile,
+  SettingsInputAntenna,
+} from '@mui/icons-material';
 import { IconButton } from '@mui/material';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import Message from './Message';
 import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
+import firebase from 'firebase/compat/app';
+import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
+import getRecipientEmail from '../utils/getRecipientEmail';
+import ReactTimeAgo from 'react-time-ago';
 
 function ChatScreen({ chat, messages }) {
   const [user] = useAuthState(auth);
   const router = useRouter();
+  const [input, setInput] = useState('');
   const [messagesSnapshot] = useCollection(
     db
       .collection('chats')
@@ -21,29 +31,77 @@ function ChatScreen({ chat, messages }) {
       .orderBy('timestamp', 'asc')
   );
 
+  const [recipientSnapshot] = useCollection(
+    db
+      .collection('users')
+      .where('email', '===', getRecipientEmail(chat.users, user))
+  );
+
+  const sendMessage = (e) => {
+    e.preventDefault();
+
+    db.collection('users').doc(user.uid).set(
+      {
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    db.collection('chats').doc(router.query.id).collection('messages').add({
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      message: input,
+      user: user.email,
+      photoURL: user.photoURL,
+    });
+
+    setInput('');
+  };
+
   const showMessages = () => {
     if (messagesSnapshot) {
       return messagesSnapshot.docs.map((message) => (
         <Message
           key={message.id}
           user={message.data().user}
-          messgae={{
+          message={{
             ...message.data(),
             timestamp: message.data().timestamp?.toDate().getTime(),
           }}
         />
       ));
+    } else {
+      return JSON.parse(messages).map((message) => (
+        <Message key={message.id} user={message.user} message={message} />
+      ));
     }
   };
+
+  const recipient = recipientSnapshot?.docs?.[0]?.data();
+  const recipientEmail = getRecipientEmail(chat.users, user);
 
   return (
     <Container>
       <Header>
-        <Avatar />
+        {recipient ? (
+          <Avatar src={recipient?.photoURL} />
+        ) : (
+          <Avatar>{recipientEmail[0]}</Avatar>
+        )}
 
         <HeaderInformation>
-          <h3>Recpiniet email</h3>
-          <p>last active</p>
+          <h3>{recipientEmail}</h3>
+          {recipientSnapshot ? (
+            <p>
+              Last active:{' '}
+              {recipient?.lastSeen?.toDate() ? (
+                <ReactTimeAgo date={recipient?.lastSeen?.toDate()} />
+              ) : (
+                'Unavailable'
+              )}
+            </p>
+          ) : (
+            <p>Loading Last active ...</p>
+          )}
+          <p></p>
         </HeaderInformation>
         <HeaderIcons>
           <IconButton>
@@ -61,7 +119,18 @@ function ChatScreen({ chat, messages }) {
 
       <InputContainer>
         <EmojiEmotionsIcon />
-        <Input />
+        <Input value={input} onChange={(e) => setInput(e.target.value)} />
+
+        <Stack direction="row" spacing={2}>
+          <Button
+            type="submit"
+            onClick={sendMessage}
+            variant="contained"
+            color="success"
+          >
+            SEND
+          </Button>
+        </Stack>
       </InputContainer>
     </Container>
   );
